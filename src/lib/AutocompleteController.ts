@@ -67,19 +67,26 @@ class AutocompleteController {
   getAutoSearch(): Observable<string> {
     const search$: Observable<string> = Observable.create(
       (observer: Subscriber<string>) => {
-        let resultSubscription: Subscription | undefined;
+        let requestSubscription: Subscription | undefined;
         let stopQuery: boolean | undefined;
 
+        const cancelPendingRequest = () => {
+          if (requestSubscription) {
+            console.log('cancel pending request!');
+            requestSubscription.unsubscribe();
+            requestSubscription = undefined;
+            this.setLoading(false);
+          }
+        };
+
+        // 不能因为搜索而影响用户正常输入新的字符；
         this.payload$.subscribe({
           next: (v: string) => {
+            // 如果用户输入超过 30 个字符，取消所有请求，并显示提示：您输入的字符数过多。
             if (v.length > 30) {
               stopQuery = true;
               this.toggleWarning(true);
-              if (resultSubscription) {
-                console.log('cancel pending request!');
-                resultSubscription.unsubscribe();
-                resultSubscription = undefined;
-              }
+              cancelPendingRequest();
             } else {
               stopQuery = false;
               this.toggleWarning();
@@ -88,21 +95,19 @@ class AutocompleteController {
           },
         });
 
+        // 用户停止输入 500ms 后，再发送请求；
         this.payload$.pipe(debounce(() => interval(500))).subscribe({
           next: (v: string) => {
             if (stopQuery) {
               return;
             }
-            if (resultSubscription) {
-              console.log('cancel pending request!');
-              resultSubscription.unsubscribe();
-              resultSubscription = undefined;
-            }
+            // 如果请求没有返回时，用户就再次输入，要取消之前的请求；
+            cancelPendingRequest();
             this.setLoading(true);
 
             const result = this.searchQuery(v);
 
-            resultSubscription = result.subscribe({
+            requestSubscription = result.subscribe({
               next: users => this.setSearchResults(users),
               error(err) {
                 console.error('something wrong occurred: ' + err);
