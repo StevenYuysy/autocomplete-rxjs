@@ -1,3 +1,4 @@
 {
-  "extends": ["tslint-react"]
+  "extends": ["tslint-react"],
+  "trailing-comma": [true, { "multiline": "always", "singleline": "never" }]
 }
