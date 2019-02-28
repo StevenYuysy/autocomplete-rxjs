@@ -3,7 +3,7 @@ import { debounce } from 'rxjs/operators';
 
 const generateMockResult = (str: string): User[] => {
   const result: User[] = [];
-  for (let i = 0; i <= str.length; i++) {
+  for (let i = 0; i < str.length; i++) {
     result.push({
       id: i,
       name: `${str}_${i}`,
@@ -12,9 +12,16 @@ const generateMockResult = (str: string): User[] => {
   return result;
 };
 
-interface User {
+export interface User {
   id: number;
   name: string;
+}
+
+interface IAutoCompleteProps {
+  text: Subject<string>;
+  response: Subject<User[]>;
+  warning: Subject<boolean>;
+  loading: Subject<boolean>;
 }
 
 class AutocompleteController {
@@ -26,25 +33,36 @@ class AutocompleteController {
   payload$: Subject<string>;
 
   subscription: Subscription;
+  text: Subject<string>;
+  response: Subject<User[]>;
+  warning: Subject<boolean>;
+  loading: Subject<boolean>;
 
-  constructor() {
+  constructor({ text, response, warning, loading }: IAutoCompleteProps) {
     this.payload$ = new Subject();
     this.subscription = this.getAutoSearch().subscribe();
+    this.text = text;
+    this.response = response;
+    this.warning = warning;
+    this.loading = loading;
   }
 
   // 更新 Input 框中的搜索词
   setSearchStr(str: string): void {
     console.log('setSearchStr', str);
+    this.text.next(str);
   }
   // 更新搜索状态
   setLoading(isLoading: boolean): void {
     console.log('isLoading:', isLoading);
+    this.loading.next(isLoading);
   }
   // 显示或隐藏警告信息
   toggleWarning(isShown?: boolean): void {
     if (isShown) {
       console.log('warning');
     }
+    this.warning.next(isShown);
   }
   // 发送请求，获取搜索结果
   searchQuery(str: string): Observable<User[]> {
@@ -61,6 +79,7 @@ class AutocompleteController {
   // 更新搜索结果列表
   setSearchResults(users: User[]): void {
     console.log('get search result', users);
+    this.response.next(users);
   }
 
   // 你要实现的方法
@@ -127,6 +146,4 @@ class AutocompleteController {
   }
 }
 
-const autocomplete = new AutocompleteController();
-
-export default autocomplete;
+export default AutocompleteController;
